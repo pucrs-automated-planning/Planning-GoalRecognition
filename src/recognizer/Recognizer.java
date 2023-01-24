@@ -37,6 +37,7 @@ public abstract class Recognizer {
 
 	protected GroundProblem groundProblem;
 	protected List<Action> observations;
+	protected List<Action> observationsNoisy;
 	protected List<GroundFact> goals;
 	protected GroundFact realGoal;
 	protected STRIPSState initialState;
@@ -53,8 +54,12 @@ public abstract class Recognizer {
 			if(!Files.isReadable(Paths.get(fileName)))
 				throw new IOException(fileName + " not found.");
 			
+			String cmdRemovingFiles = "rm -rf domain.pddl template.pddl templateInitial.pddl obs.dat hyps.dat plan.png real_hyp.dat";
+			System.out.println(cmdRemovingFiles);
+			Process p = Runtime.getRuntime().exec(cmdRemovingFiles);
+			p.waitFor();
 			System.out.println("tar -jxvf " + this.planRecognitionFile);
-			Process p = Runtime.getRuntime().exec("tar -jxvf " + this.planRecognitionFile);
+			p = Runtime.getRuntime().exec("tar -jxvf " + this.planRecognitionFile);
 			p.waitFor();
 			String domainFilePath = "domain.pddl";
 			Path path = Paths.get(domainFilePath);
@@ -68,6 +73,7 @@ public abstract class Recognizer {
 			
 			String initialFilePath = "templateInitial.pddl";
 			String observationsFilePath = "obs.dat";
+			String observationsNoisyFilePath = "obs_noisy.dat";
 			String goalsFilePath = "hyps.dat";
 			String realGoalFilePath = "real_hyp.dat";
 			path = Paths.get("template.pddl");
@@ -82,6 +88,10 @@ public abstract class Recognizer {
 			this.threshold = threshold;
 			this.groundProblem = PDDLParser.getGroundDomainProblem(domainFilePath, initialFilePath);
 			this.observations = PDDLParser.getObservations(groundProblem, observationsFilePath);
+			File f = new File(observationsNoisyFilePath);
+			if(f.exists() && !f.isDirectory())
+				this.observationsNoisy = PDDLParser.getObservations(groundProblem, observationsNoisyFilePath);
+			
 			this.goals = PDDLParser.getGoals(groundProblem, goalsFilePath);
 			this.realGoal = PDDLParser.getGoals(groundProblem, realGoalFilePath).get(0);
 			this.initialState = groundProblem.getSTRIPSInitialState();
@@ -140,6 +150,7 @@ public abstract class Recognizer {
 			System.out.println("\t>$ " + o);
 		
 		for(GroundFact goal: this.goals){
+			currentState = this.initialState;
 			System.out.println("\n---> Goal: " + goal);
 			/* Extracting landmarks for a candidate goal from the initial state */
 			LandmarkExtractor landmarkExtractor = this.goalsToLandmarkExtractor.get(goal); 
@@ -147,6 +158,8 @@ public abstract class Recognizer {
 				landmarkExtractor = new PartialLandmarkGenerator(this.initialState, goal.getFacts(), this.groundProblem.getActions());
 				landmarkExtractor.extractLandmarks();
 				this.goalsToLandmarkExtractor.put(goal, landmarkExtractor);
+				this.goalsToLandmarks.put(goal, landmarkExtractor.getLandmarks());
+				this.goalsToFactLandmarks.put(goal, landmarkExtractor.getFactLandmarks());
 			}
 			System.out.println("\t\t #> Ordered Landmarks: ");
 			for(LandmarkOrdering landmarkOrdering: landmarkExtractor.getLandmarksOrdering())
@@ -174,7 +187,8 @@ public abstract class Recognizer {
 				currentState = (STRIPSState) currentState.apply(o);
 			}
 			goalsToAchievedLandmarks.put(goal, achievedLandmarks);
-			System.out.println("\n\t># Achieved Landmarks in Observations: \n\t\t" + achievedLandmarks);
+			System.out.println("\n\t># Total number of Landmarks: " + this.goalsToLandmarks.get(goal).size());
+			System.out.println("\t># Achieved Landmarks in Observations [" + achievedLandmarks.size() + "]: " + " \n\t\t" + achievedLandmarks);
 		}
 		return goalsToAchievedLandmarks;
 	}
@@ -190,6 +204,7 @@ public abstract class Recognizer {
 		}
 		return inferredFactLandmarks;
 	}
+	
 	
 	/**
 	 * This method returns true if the correct goal was recognized in the set of candidate goals from the observations.
@@ -212,5 +227,19 @@ public abstract class Recognizer {
 	
 	public int getObservationsSize(){
 		return this.observations.size();
+	}
+	
+	public int getObservationsNoisySize(){
+		return this.observationsNoisy.size();
+	}
+	
+	public double getAverageLandmarks() {
+		double avgLandmarks = 0;
+		double totalLandmarks = 0;
+		for(Set<Fact> landmarks: this.goalsToFactLandmarks.values())
+			totalLandmarks += landmarks.size();
+
+		avgLandmarks = totalLandmarks / this.goalsToFactLandmarks.size();
+		return avgLandmarks;
 	}
 }

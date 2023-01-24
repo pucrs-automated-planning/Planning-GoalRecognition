@@ -1,4 +1,4 @@
-# Planning-GoalRecognition
+# Landmark-Based-GoalRecognition
 
 Landmark-Based Approaches For Goal Recognition.
 
@@ -31,6 +31,18 @@ java -jar goalrecognizer1.0.jar -filter experiments/blocks-test/blocks-test.tar.
 ```bash
 java -jar goalrecognizer1.0.jar -goalcompletion experiments/blocks-test/domain.pddl experiments/blocks-test/template.pddl experiments/blocks-test/hyps.dat experiments/blocks-test/obs.dat experiments/blocks-test/real_hyp.dat 0.1
 ```
+
+## Observations as Facts
+
+Our approaches also deal with observations as facts. To use the recognizers in such mode, please use the branch called *obsfacts*:
+
+- https://github.com/ramonpereira/Landmark-Based-GoalRecognition/tree/obsfacts
+
+At the following link we have some examples of how we use observations as facts:
+
+- https://github.com/ramonpereira/Landmark-Based-GoalRecognition/tree/obsfacts/experiments/factobs
+
+There is also an executable file called *goalrecognizer-obsfacts.jar*.
 
 ## Dependencies
 
